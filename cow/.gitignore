@@ -1,0 +1,4 @@
+*.o
+*.a
+cowfuncs.c
+Makefile.in
