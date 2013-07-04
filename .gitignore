@@ -1,3 +1,5 @@
 scalar_wave1d
 scalar_wave2d
 scalar_wave3d
+*.py
+*.txt
