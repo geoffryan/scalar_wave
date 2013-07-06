@@ -19,7 +19,7 @@ OS = macosx
 
 # Location of HDF5 and FFTW-3.3 libraries (optional).
 #
-HDF_HOME = /usr/local/hdf5-1.8.10-par
+HDF_HOME = $(HOME)/Coding/Libraries/hdf5-1.8.9
 FFT_HOME = /usr/local/fftw-3.3
 
 
@@ -34,6 +34,6 @@ LUA_HOME ?= $(PWD)/$(LVER)
 #
 USE_MPI  = 1 # Message Passing Interface (use mpicc / mpicxx as compiler)
 USE_MPIO = 0 # good for collective IO on clusters
-USE_HDF5 = 0 # needed to compile lua-hdf5 wrappers
+USE_HDF5 = 1 # needed to compile lua-hdf5 wrappers
 USE_FFTW = 0 # needed for some C.O.W. routines
 USE_LUA  = 0 # compile Lua wrappers (need LUA_HOME macro)
