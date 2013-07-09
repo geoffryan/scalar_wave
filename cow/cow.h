@@ -55,6 +55,7 @@ void cow_domain_del(cow_domain *d);
 void cow_domain_setsize(cow_domain *d, int dim, int size);
 void cow_domain_setndim(cow_domain *d, int ndim);
 void cow_domain_setguard(cow_domain *d, int guard);
+void cow_domain_setextent(cow_domain *d, int dim, double x0, double x1);
 void cow_domain_setprocsizes(cow_domain *d, int dim, int size);
 void cow_domain_setcollective(cow_domain *d, int mode);
 void cow_domain_setchunk(cow_domain *d, int mode);

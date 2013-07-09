@@ -79,33 +79,48 @@ void initial_gauss(cow_dfield *phi, double a, double b, double v, double width, 
 int run(cow_dfield *phi, double a, double b, double v, double cfl, double T)
 {
 	cow_domain *dom = cow_dfield_getdomain(phi);	
+	int size = cow_domain_getsize(dom, 0);
+	int cartrank = cow_domain_getcartrank(dom);
 	
 	double dx = (b-a) * cow_domain_getgridspacing(dom, 0);
 	double dt = cfl * dx / v;
 	
 	double t = 0;
 	int nt = 0;
-	double *data;
 	
 	char basename[] = "out/output_1d";
 	char name[50];
+	char sumname[50];
+	
+	sprintf(name, "%s_%d_%lg_%d.h5", basename, size, t, nt);
+	sprintf(sumname, "%s_%d_summary.txt", basename, size);
+
+	if(cartrank == 0)
+	{
+		FILE *sumfile = fopen(sumname, "w");
+		fprintf(sumfile, "size: %d\n", size);
+		fprintf(sumfile, "a: %lg\n", a);
+		fprintf(sumfile, "b: %lg\n", b);
+		fprintf(sumfile, "v: %lg\n", v);
+		fprintf(sumfile, "cfl: %lg\n", cfl);
+		fprintf(sumfile, "dx: %lg\n", dx);
+		fprintf(sumfile, "dt: %lg\n", dt);
+		fprintf(sumfile, "T: %lg\n", T);
+		fclose(sumfile);
+	}
 	
 	printf("dx: %lg, dt: %lg\n", dx, dt);
 	
-	data = cow_dfield_getdatabuffer(phi);
-	
-	sprintf(name, "%s_%d.h5", basename, nt);
 	cow_dfield_write(phi, name);
 	
 	while(t < T)
 	{
 		timestep(phi, v, dt, a, b);
-		data = cow_dfield_getdatabuffer(phi);
 
 		t += dt;
 		nt++;
 		
-		sprintf(name, "%s_%d.h5", basename, nt);
+		sprintf(name, "%s_%d_%lg_%d.h5", basename, size, t, nt);
 		cow_dfield_write(phi, name);		
 	}
 	
@@ -332,9 +347,21 @@ int main(int argc, char *argv[])
 {	
 	cow_init(argc, argv, 0);
 	
+	int size = 128;
+	
+	if(argc > 1)
+	{
+		size = (int) strtol(argv[1], NULL, 10);
+		if(size == 0)
+		{
+			printf("Hey, ya gotta give me an positive integer size numbnuts!\n");
+			return 0;
+		}
+	}
+	
 	cow_domain *dom = cow_domain_new();
 	cow_domain_setndim(dom, 1);
-	cow_domain_setsize(dom, 0, 200);
+	cow_domain_setsize(dom, 0, size);
 	cow_domain_setguard(dom, 2);
 	cow_domain_commit(dom);
 	
@@ -352,14 +379,14 @@ int main(int argc, char *argv[])
 	printf("Hello from %d!\n", r);
 	
 	int ng = cow_domain_getguard(dom);
-	int nx = cow_domain_getsize(dom, 0);
+	int nx = cow_domain_getnumlocalzonesinterior(dom, 0);
 	
-	printf("ng: %d, nx: %d\n", ng, nx);
+	printf("size: %d, ng: %d, nx: %d\n", size, ng, nx);
 	
 	double a = -1;
 	double b = 1;
-	double cfl = 0.99;
-	double T = 20.1;
+	double cfl = 0.95;
+	double T = 8.5;
 	double v = 1.0;
 	
 	double lambda = (b - a) / 5;

@@ -3,3 +3,5 @@ scalar_wave2d
 scalar_wave3d
 *.py
 *.txt
+out
+
