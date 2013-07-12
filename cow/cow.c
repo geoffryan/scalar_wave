@@ -157,9 +157,9 @@ void cow_domain_setguard(cow_domain *d, int guard)
 }
 void cow_domain_setextent(cow_domain *d, int dim, double x0, double x1)
 {
-	if (dim >= 3 || d->committed) return;
-	d->glb_lower[dim] = x0;
-	d->glb_upper[dim] = x1;
+  if (dim >= 3 || d->commited) return;
+  d->glb_lower[dim] = x0;
+  d->glb_upper[dim] = x1;
 }
 int cow_domain_getguard(cow_domain *d)
 {
