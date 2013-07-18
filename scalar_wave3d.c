@@ -390,9 +390,9 @@ void forward_euler(cow_dfield *phi, double v, double dt)
 	double dy = cow_domain_getgridspacing(dom, 1);
 	double dz = cow_domain_getgridspacing(dom, 2);
 	
-	double idx = dt*v*v / dx*dx;
-	double idy = dt*v*v / dy*dy;
-	double idz = dt*v*v / dz*dz;
+	double idx = dt*v*v / (dx*dx);
+	double idy = dt*v*v / (dy*dy);
+	double idz = dt*v*v / (dz*dz);
 	
 	int i,j,k;
 	
@@ -443,9 +443,9 @@ void rk2(cow_dfield *phi, double v, double dt)
 	double dy = cow_domain_getgridspacing(dom, 1);
 	double dz = cow_domain_getgridspacing(dom, 2);
 	
-	double idx = dt*v*v / dx*dx;
-	double idy = dt*v*v / dy*dy;
-	double idz = dt*v*v / dz*dz;
+	double idx = dt*v*v / (dx*dx);
+	double idy = dt*v*v / (dy*dy);
+	double idz = dt*v*v / (dz*dz);
 	
 	int i,j,k;
 	
@@ -519,11 +519,11 @@ void rk4(cow_dfield *phi, double v, double dt)
 	double dy = cow_domain_getgridspacing(dom, 1);
 	double dz = cow_domain_getgridspacing(dom, 2);
 	
-	double idx = dt*v*v / dx*dx;
-	double idy = dt*v*v / dy*dy;
-	double idz = dt*v*v / dz*dz;
+	double idx = dt*v*v / (dx*dx);
+	double idy = dt*v*v / (dy*dy);
+	double idz = dt*v*v / (dz*dz);
 	
-	int i,j,k;
+	int i,j,k,n;
 	
 	cow_dfield *dphi1 = cow_dfield_new();
 	cow_dfield_setdomain(dphi1, dom);
@@ -563,10 +563,11 @@ void rk4(cow_dfield *phi, double v, double dt)
 		for(j = ng; j < ny+ng; j++)
 			for(k = ng; k < nz+ng; k++)
 			{
-				field1[sx*i+sy*j+sz*k] = dt * field[sx*i+sy*j+sz*k+1];
-				field1[sx*i+sy*j+sz*k+1] = idx*(field[sx*(i+1)+sy*j+sz*k] + field[sx*(i-1)+sy*j+sz*k] - 2*field[sx*i+sy*j+sz*k]);
-				field1[sx*i+sy*j+sz*k+1] += idy*(field[sx*i+sy*(j+1)+sz*k] + field[sx*i+sy*(j-1)+sz*k] - 2*field[sx*i+sy*j+sz*k]);
-				field1[sx*i+sy*j+sz*k+1] += idz*(field[sx*i+sy*j+sz*(k+1)] + field[sx*i+sy*j+sz*(k-1)] - 2*field[sx*i+sy*j+sz*k]);
+				n = sx*i+sy*j+sz*k;
+				field1[n] = dt * field[n+1];
+				field1[n+1] = idx*(field[n+sx] + field[n-sx] - 2*field[n]);
+				field1[n+1] += idy*(field[n+sy] + field[n-sy] - 2*field[n]);
+				field1[n+1] += idz*(field[n+sz] + field[n-sz] - 2*field[n]);
 			}
 	cow_dfield_syncguard(dphi1);
 	
@@ -574,13 +575,14 @@ void rk4(cow_dfield *phi, double v, double dt)
 		for(j = ng; j < ny+ng; j++)
 			for(k = ng; k < nz+ng; k++)
 			{
-				field2[sx*i+sy*j+sz*k] = dt * (field[sx*i+sy*j+sz*k+1]+0.5*field1[sx*i+sy*j+sz*k+1]);
-				field2[sx*i+sy*j+sz*k+1] = idx*(field[sx*(i+1)+sy*j+sz*k] + field[sx*(i-1)+sy*j+sz*k] - 2*field[sx*i+sy*j+sz*k]
-												+ 0.5*(field1[sx*(i+1)+sy*j+sz*k] + field1[sx*(i-1)+sy*j+sz*k] - 2*field1[sx*i+sy*j+sz*k]));
-				field2[sx*i+sy*j+sz*k+1] += idy*(field[sx*i+sy*(j+1)+sz*k] + field[sx*i+sy*(j-1)+sz*k] - 2*field[sx*i+sy*j+sz*k]
-												 + 0.5*(field1[sx*i+sy*(j+1)+sz*k] + field1[sx*i+sy*(j-1)+sz*k] - 2*field1[sx*i+sy*j+sz*k]));
-				field2[sx*i+sy*j+sz*k+1] += idz*(field[sx*i+sy*j+sz*(k+1)] + field[sx*i+sy*j+sz*(k-1)] - 2*field[sx*i+sy*j+sz*k]
-												 + 0.5*(field1[sx*i+sy*j+sz*(k+1)] + field1[sx*i+sy*j+sz*(k-1)] - 2*field1[sx*i+sy*j+sz*k]));
+				n = sx*i+sy*j+sz*k;
+				field2[n] = dt * (field[n+1] + 0.5*field1[n+1]);
+				field2[n+1] = idx*(field[n+sx] + field[n-sx] - 2*field[n]
+								   + 0.5*(field1[n+sx] + field1[n-sx] - 2*field1[n]));
+				field2[n+1] += idy*(field[n+sy] + field[n-sy] - 2*field[n]
+									+ 0.5*(field1[n+sy] + field1[n-sy] - 2*field1[n]));
+				field2[n+1] += idz*(field[n+sz] + field[n-sz] - 2*field[n]
+									+ 0.5*(field1[n+sz] + field1[n-sz] - 2*field1[n]));
 			}
 	cow_dfield_syncguard(dphi2);
 	
@@ -588,13 +590,14 @@ void rk4(cow_dfield *phi, double v, double dt)
 		for(j = ng; j < ny+ng; j++)
 			for(k = ng; k < nz+ng; k++)
 			{
-				field3[sx*i+sy*j+sz*k] = dt * (field[sx*i+sy*j+sz*k+1]+0.5*field2[sx*i+sy*j+sz*k+1]);
-				field3[sx*i+sy*j+sz*k+1] = idx*(field[sx*(i+1)+sy*j+sz*k] + field[sx*(i-1)+sy*j+sz*k] - 2*field[sx*i+sy*j+sz*k]
-												+ 0.5*(field2[sx*(i+1)+sy*j+sz*k] + field2[sx*(i-1)+sy*j+sz*k] - 2*field2[sx*i+sy*j+sz*k]));
-				field3[sx*i+sy*j+sz*k+1] += idy*(field[sx*i+sy*(j+1)+sz*k] + field[sx*i+sy*(j-1)+sz*k] - 2*field[sx*i+sy*j+sz*k]
-												 + 0.5*(field2[sx*i+sy*(j+1)+sz*k] + field2[sx*i+sy*(j-1)+sz*k] - 2*field2[sx*i+sy*j+sz*k]));
-				field3[sx*i+sy*j+sz*k+1] += idz*(field[sx*i+sy*j+sz*(k+1)] + field[sx*i+sy*j+sz*(k-1)] - 2*field[sx*i+sy*j+sz*k]
-												 + 0.5*(field2[sx*i+sy*j+sz*(k+1)] + field2[sx*i+sy*j+sz*(k-1)] - 2*field2[sx*i+sy*j+sz*k]));
+				n = sx*i+sy*j+sz*k;
+				field3[n] = dt * (field[n+1] + 0.5*field2[n+1]);
+				field3[n+1] = idx*(field[n+sx] + field[n-sx] - 2*field[n]
+								   + 0.5*(field2[n+sx] + field2[n-sx] - 2*field2[n]));
+				field3[n+1] += idy*(field[n+sy] + field[n-sy] - 2*field[n]
+									+ 0.5*(field2[n+sy] + field2[n-sy] - 2*field2[n]));
+				field3[n+1] += idz*(field[n+sz] + field[n-sz] - 2*field[n]
+									+ 0.5*(field2[n+sz] + field2[n-sz] - 2*field2[n]));
 			}
 	cow_dfield_syncguard(dphi3);
 	
@@ -602,21 +605,24 @@ void rk4(cow_dfield *phi, double v, double dt)
 		for(j = ng; j < ny+ng; j++)
 			for(k = ng; k < nz+ng; k++)
 			{
-				field4[sx*i+sy*j+sz*k] = dt * (field[sx*i+sy*j+sz*k+1]+field2[sx*i+sy*j+sz*k+1]);
-				field4[sx*i+sy*j+sz*k+1] = idx*(field[sx*(i+1)+sy*j+sz*k] + field[sx*(i-1)+sy*j+sz*k] - 2*field[sx*i+sy*j+sz*k]
-												+ field2[sx*(i+1)+sy*j+sz*k] + field2[sx*(i-1)+sy*j+sz*k] - 2*field2[sx*i+sy*j+sz*k]);
-				field4[sx*i+sy*j+sz*k+1] += idy*(field[sx*i+sy*(j+1)+sz*k] + field[sx*i+sy*(j-1)+sz*k] - 2*field[sx*i+sy*j+sz*k]
-												 + field2[sx*i+sy*(j+1)+sz*k] + field2[sx*i+sy*(j-1)+sz*k] - 2*field2[sx*i+sy*j+sz*k]);
-				field4[sx*i+sy*j+sz*k+1] += idz*(field[sx*i+sy*j+sz*(k+1)] + field[sx*i+sy*j+sz*(k-1)] - 2*field[sx*i+sy*j+sz*k]
-												 + field2[sx*i+sy*j+sz*(k+1)] + field2[sx*i+sy*j+sz*(k-1)] - 2*field2[sx*i+sy*j+sz*k]);
+				n = sx*i+sy*j+sz*k;
+				field4[n] = dt * (field[n+1] + 0.5*field2[n+1]);
+				field4[n+1] = idx*(field[n+sx] + field[n-sx] - 2*field[n]
+								   + field3[n+sx] + field3[n-sx] - 2*field3[n]);
+				field4[n+1] += idy*(field[n+sy] + field[n-sy] - 2*field[n]
+									+ field3[n+sy] + field3[n-sy] - 2*field3[n]);
+				field4[n+1] += idz*(field[n+sz] + field[n-sz] - 2*field[n]
+									+ field3[n+sz] + field3[n-sz] - 2*field3[n]);
 			}
+	cow_dfield_syncguard(dphi4);
 	
 	for(i = ng; i < nx+ng; i++)
 		for(j = ng; j < ny+ng; j++)
 			for(k = ng; k < nz+ng; k++)
 			{
-				field[sx*i+sy*j+sz*k] += (field1[sx*i+sy*j+sz*k]+2*field2[sx*i+sy*j+sz*k]+2*field3[sx*i+sy*j+sz*k]+field4[sx*i+sy*j+sz*k]) / 6.0;
-				field[sx*i+sy*j+sz*k+1] += (field1[sx*i+sy*j+sz*k+1]+2*field2[sx*i+sy*j+sz*k+1]+2*field3[sx*i+sy*j+sz*k+1]+field4[sx*i+sy*j+sz*k+1]) / 6.0;
+				n = sx*i+sy*j+sz*k;
+				field[n] += (field1[n] + 2*field2[n] + 2*field3[n] + field4[n]) / 6.0;
+				field[n+1] += (field1[n+1] + 2*field2[n+1] + 2*field3[n+1] + field4[n+1]) / 6.0;
 			}
 	
 	
@@ -642,9 +648,9 @@ void leap_frog(cow_dfield *phi, double v, double dt)
 	double dy = cow_domain_getgridspacing(dom, 1);
 	double dz = cow_domain_getgridspacing(dom, 2);
 	
-	double idx = dt*v*v / dx*dx;
-	double idy = dt*v*v / dy*dy;
-	double idz = dt*v*v / dz*dz;
+	double idx = dt*v*v / (dx*dx);
+	double idy = dt*v*v / (dy*dy);
+	double idz = dt*v*v / (dz*dz);
 	
 	int i,j,k;
 	
@@ -715,12 +721,12 @@ int main(int argc, char *argv[])
 	printf("Sy: %d\n", cow_dfield_getstride(phi, 1));
 	printf("Sz: %d\n", cow_dfield_getstride(phi, 2));
 	
-	double cfl = 0.1;
-	double T = 1.0;
+	double cfl = 0.9;
+	double T = 2.0;
 	double v = 1.0;
 	double params[5];
 	
-	params[0] = 0.3;
+	params[0] = 1.0;
 	params[1] = 0;
 	initialize = &initial_sine;
 	timestep = &rk4;
