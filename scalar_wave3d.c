@@ -31,8 +31,11 @@ double min3(double a, double b, double c)
 	}
 }
 
-void initial_sine(cow_dfield *phi, double v, double wavelength, double phase)
+void initial_sine(cow_dfield *phi, double v, double *params)
 {
+	double wavelength = params[0];
+	double phase = params[1];
+	
 	cow_domain *dom = cow_dfield_getdomain(phi);
 	int ng = cow_domain_getguard(dom);
 	int nx = cow_domain_getnumlocalzonesinterior(dom, 0);
@@ -71,8 +74,11 @@ void initial_sine(cow_dfield *phi, double v, double wavelength, double phase)
 	cow_dfield_syncguard(phi);
 }
 
-void initial_sine_stand(cow_dfield *phi, double v, double wavelength, double phase)
+void initial_sine_stand(cow_dfield *phi, double v, double *params)
 {
+	double wavelength = params[0];
+	double phase = params[1];
+	
 	cow_domain *dom = cow_dfield_getdomain(phi);
 	int ng = cow_domain_getguard(dom);
 	int nx = cow_domain_getnumlocalzonesinterior(dom, 0);
@@ -101,7 +107,7 @@ void initial_sine_stand(cow_dfield *phi, double v, double wavelength, double pha
 			for(k = ng; k < nz+ng; k++)
 			{
 				z = cow_domain_positionatindex(dom, 2, k);
-				field[sx*i+sy*j+sz*k] = sin(kx*x)*sin(ky*y)*sin(kz*z);
+				field[sx*i+sy*j+sz*k] = sin(kx*x+phase)*sin(ky*y+phase)*sin(kz*z+phase);
 				field[sx*i+sy*j+sz*k+1] = 0;
 			}
 		}
@@ -110,8 +116,11 @@ void initial_sine_stand(cow_dfield *phi, double v, double wavelength, double pha
 	cow_dfield_syncguard(phi);
 }
 
-void initial_gauss(cow_dfield *phi, double v, double width, double mean)
+void initial_gauss(cow_dfield *phi, double v, double *params)
 {
+	double width = params[0];
+	double mean = params[1];
+	
 	cow_domain *dom = cow_dfield_getdomain(phi);
 	int ng = cow_domain_getguard(dom);
 	int nx = cow_domain_getnumlocalzonesinterior(dom, 0);
@@ -136,7 +145,165 @@ void initial_gauss(cow_dfield *phi, double v, double width, double mean)
 			for(k = ng; k < nz+ng; k++)
 			{
 				z = cow_domain_positionatindex(dom, 2, k);
-				field[sx*i+sy*j+sz*k] = exp(-(x*x+y*y+z*z)*inv_var);
+				field[sx*i+sy*j+sz*k] = exp(-((x-mean)*(x-mean)+y*y+z*z)*inv_var);
+				field[sx*i+sy*j+sz*k+1] = 0;
+			}
+		}
+	}
+	
+	cow_dfield_syncguard(phi);
+}
+
+void initial_impulse(cow_dfield *phi, double v, double *params)
+{
+	double radius = params[0];
+	double height = params[1];
+	
+	cow_domain *dom = cow_dfield_getdomain(phi);
+	int ng = cow_domain_getguard(dom);
+	int nx = cow_domain_getnumlocalzonesinterior(dom, 0);
+	int ny = cow_domain_getnumlocalzonesinterior(dom, 1);
+	int nz = cow_domain_getnumlocalzonesinterior(dom, 2);
+	int sx = cow_dfield_getstride(phi, 0);
+	int sy = cow_dfield_getstride(phi, 1);
+	int sz = cow_dfield_getstride(phi, 2);
+	
+	double *field = (double *) cow_dfield_getdatabuffer(phi);
+	
+	int i, j, k;
+	double x, y, z;
+	
+	for(i = ng; i < nx+ng; i++)
+	{	
+		x = cow_domain_positionatindex(dom, 0, i);
+		for(j = ng; j < ny+ng; j++)
+		{
+			y = cow_domain_positionatindex(dom, 1, j);
+			for(k = ng; k < nz+ng; k++)
+			{
+				z = cow_domain_positionatindex(dom, 2, k);
+				if(x*x+y*y+z*z <= radius*radius)
+					field[sx*i+sy*j+sz*k] = height;
+				else
+					field[sx*i+sy*j+sz*k] = 0;
+				field[sx*i+sy*j+sz*k+1] = 0;
+			}
+		}
+	}
+	
+	cow_dfield_syncguard(phi);
+}
+
+void initial_sphericalwave(cow_dfield *phi, double v, double *params)
+{
+	double wavelength = params[0];
+	double scale = params[1];
+	
+	cow_domain *dom = cow_dfield_getdomain(phi);
+	int ng = cow_domain_getguard(dom);
+	int nx = cow_domain_getnumlocalzonesinterior(dom, 0);
+	int ny = cow_domain_getnumlocalzonesinterior(dom, 1);
+	int nz = cow_domain_getnumlocalzonesinterior(dom, 2);
+	int sx = cow_dfield_getstride(phi, 0);
+	int sy = cow_dfield_getstride(phi, 1);
+	int sz = cow_dfield_getstride(phi, 2);
+	
+	double *field = (double *) cow_dfield_getdatabuffer(phi);
+	
+	int i, j, k;
+	double x, y, z, r;
+	double wavenum = 2 * M_PI / wavelength;
+	
+	for(i = ng; i < nx+ng; i++)
+	{	
+		x = cow_domain_positionatindex(dom, 0, i);
+		for(j = ng; j < ny+ng; j++)
+		{
+			y = cow_domain_positionatindex(dom, 1, j);
+			for(k = ng; k < nz+ng; k++)
+			{
+				z = cow_domain_positionatindex(dom, 2, k);
+				r = sqrt(x*x + y*y + z*z);
+				field[sx*i+sy*j+sz*k] = scale * sin(wavenum * r) / r;
+				field[sx*i+sy*j+sz*k+1] = -scale * v * wavenum * cos(wavenum * r) / r;
+			}
+		}
+	}
+	
+	cow_dfield_syncguard(phi);
+}
+
+void initial_spherical_pulse(cow_dfield *phi, double v, double *params)
+{
+	double width = params[0];
+	double scale = params[1];
+	double r0 = params[2];
+	
+	cow_domain *dom = cow_dfield_getdomain(phi);
+	int ng = cow_domain_getguard(dom);
+	int nx = cow_domain_getnumlocalzonesinterior(dom, 0);
+	int ny = cow_domain_getnumlocalzonesinterior(dom, 1);
+	int nz = cow_domain_getnumlocalzonesinterior(dom, 2);
+	int sx = cow_dfield_getstride(phi, 0);
+	int sy = cow_dfield_getstride(phi, 1);
+	int sz = cow_dfield_getstride(phi, 2);
+	
+	double *field = (double *) cow_dfield_getdatabuffer(phi);
+	
+	int i, j, k;
+	double x, y, z, r;
+	double inv_var = 1.0/(2.0*width*width);
+	
+	for(i = ng; i < nx+ng; i++)
+	{	
+		x = cow_domain_positionatindex(dom, 0, i);
+		for(j = ng; j < ny+ng; j++)
+		{
+			y = cow_domain_positionatindex(dom, 1, j);
+			for(k = ng; k < nz+ng; k++)
+			{
+				z = cow_domain_positionatindex(dom, 2, k);
+				r = sqrt(x*x+y*y+z*z);
+				
+				field[sx*i+sy*j+sz*k] = scale/r * (exp(-inv_var*(r-r0)*(r-r0)) - exp(-inv_var*(-r-r0)*(-r-r0)));
+				field[sx*i+sy*j+sz*k+1] = 2.0*scale*v*inv_var/r * ((r-r0)*exp(-inv_var*(r-r0)*(r-r0)) - (-r-r0)*exp(-inv_var*(-r-r0)*(-r-r0)));
+			}
+		}
+	}
+	
+	cow_dfield_syncguard(phi);
+}
+
+void initial_test(cow_dfield *phi, double v, double *params)
+{
+	double width = params[0];
+	
+	cow_domain *dom = cow_dfield_getdomain(phi);
+	int ng = cow_domain_getguard(dom);
+	int nx = cow_domain_getnumlocalzonesinterior(dom, 0);
+	int ny = cow_domain_getnumlocalzonesinterior(dom, 1);
+	int nz = cow_domain_getnumlocalzonesinterior(dom, 2);
+	int sx = cow_dfield_getstride(phi, 0);
+	int sy = cow_dfield_getstride(phi, 1);
+	int sz = cow_dfield_getstride(phi, 2);
+	
+	double *field = (double *) cow_dfield_getdatabuffer(phi);
+	
+	int i, j, k;
+	double x, y, z;
+	double inv_var = 1.0/(2.0*width*width);
+	
+	for(i = ng; i < nx+ng; i++)
+	{	
+		x = cow_domain_positionatindex(dom, 0, i);
+		for(j = ng; j < ny+ng; j++)
+		{
+			y = cow_domain_positionatindex(dom, 1, j);
+			for(k = ng; k < nz+ng; k++)
+			{
+				z = cow_domain_positionatindex(dom, 2, k);
+				
+				field[sx*i+sy*j+sz*k] = exp(-((x-1.0)*(x-1.0)+(y-1.0)*(y-1.0)+(z-1.0)*(z-1.0))*inv_var)*sin(2*M_PI*x*4.0)*z;
 				field[sx*i+sy*j+sz*k+1] = 0;
 			}
 		}
@@ -548,29 +715,31 @@ int main(int argc, char *argv[])
 	printf("Sy: %d\n", cow_dfield_getstride(phi, 1));
 	printf("Sz: %d\n", cow_dfield_getstride(phi, 2));
 	
-	double cfl = 0.95;
+	double cfl = 0.1;
 	double T = 1.0;
 	double v = 1.0;
+	double params[5];
 	
-	double lambda = (b[0] - a[0]);
-	double phase = 0;
+	params[0] = 0.3;
+	params[1] = 0;
 	initialize = &initial_sine;
 	timestep = &rk4;
 	
-//	double lambda = 2*(b-a) / 2.0;
-//	double phase = 0;
-//	initialize = &initial_sine_stand;
-//	timestep = &forward_euler;
+//	params[0] = 0.05*(b[0]-a[0]);
+//	params[1] = 1.0;
+//	initialize = &initial_impulse;
+//	timestep = &rk4;
 	
-//	double lambda = (b-a) / 10.0;
-//	double phase = 0.5*(a+b);
-//	initialize = &initial_gauss;
-//	timestep = &leap_frog;
+//	params[0] = 0.1;
+//	params[1] = 1.0;
+//	params[2] = 0.3;
+//	initialize = &initial_spherical_pulse;
+//	timestep = &rk4;
 	
 	int nt;
 	
 	//Initialize
-	initialize(phi, v, lambda, phase);
+	initialize(phi, v, params);
 	//Run
 	nt = run(phi, v, cfl, T);
 	//Output
